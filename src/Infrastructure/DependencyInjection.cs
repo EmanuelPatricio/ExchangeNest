@@ -2,6 +2,7 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Email;
 using Domain.Applications;
+using Domain.Configurations;
 using Domain.ExchangePrograms;
 using Domain.GenericStatuses;
 using Domain.Organizations;
@@ -55,6 +56,7 @@ public static class DependencyInjection
         services.AddScoped<IExchangeProgramRepository, ExchangeProgramRepository>();
         services.AddScoped<IApplicationRepository, ApplicationRepository>();
         services.AddScoped<IGenericStatusRepository, GenericStatusRepository>();
+        services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
 
         #endregion
 

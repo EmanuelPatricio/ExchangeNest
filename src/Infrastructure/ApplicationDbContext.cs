@@ -20,6 +20,7 @@ public sealed class ApplicationDbContext : DbContext, IUnitOfWork
     public DbSet<State> States { get; set; }
     public DbSet<Domain.Applications.Application> Applications { get; set; }
     public DbSet<Domain.Applications.ApplicationDocument> ApplicationDocuments { get; set; }
+    public DbSet<Domain.Configurations.Configuration> Configurations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

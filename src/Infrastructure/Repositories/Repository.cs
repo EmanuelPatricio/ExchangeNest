@@ -29,3 +29,18 @@ internal abstract class Repository<TEntity, TEntityId>
         return _db.ChangeTracker.HasChanges();
     }
 }
+
+internal abstract class Repository
+{
+    protected readonly ApplicationDbContext _db;
+
+    public Repository(ApplicationDbContext dbContext)
+    {
+        _db = dbContext;
+    }
+
+    public bool HasChanges()
+    {
+        return _db.ChangeTracker.HasChanges();
+    }
+}
