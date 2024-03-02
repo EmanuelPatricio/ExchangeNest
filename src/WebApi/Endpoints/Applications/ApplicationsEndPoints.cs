@@ -56,7 +56,7 @@ public class ApplicationsEndPoints : ICarterModule
             {
                 var applicationDocumentNewId = applicationDocuments.Count > 0 ? applicationDocuments.Last().Id : newDocumentId.Value - 1;
 
-                applicationDocuments.Add(new ApplicationDocumentValues(++applicationDocumentNewId, applicationDocument.Category, applicationDocument.Url));
+                applicationDocuments.Add(new ApplicationDocumentValues(++applicationDocumentNewId, applicationDocument.Category, applicationDocument.Url, applicationDocument.StatusId, applicationDocument.Reason));
             }
 
             var requiredDocuments = new List<ApplicationDocumentValues>();
@@ -65,7 +65,7 @@ public class ApplicationsEndPoints : ICarterModule
                 var requiredDocumentNewId = applicationDocuments.Count > 0 ? applicationDocuments.Last().Id : newDocumentId.Value - 1;
                 requiredDocumentNewId = requiredDocuments.Count > 0 ? requiredDocuments.Last().Id : requiredDocumentNewId;
 
-                requiredDocuments.Add(new ApplicationDocumentValues(++requiredDocumentNewId, requiredDocument.Category, requiredDocument.Url));
+                requiredDocuments.Add(new ApplicationDocumentValues(++requiredDocumentNewId, requiredDocument.Category, requiredDocument.Url, requiredDocument.StatusId, requiredDocument.Reason));
             }
 
             var command = new PublishApplicationCommand(
@@ -105,12 +105,12 @@ public class ApplicationsEndPoints : ICarterModule
 
             var applicationDocuments = application.Documents
                         .Where(x => x.DocumentType == (int)DocumentTypes.Application)
-                        .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl))
+                        .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl, x.StatusId, x.Reason))
                         .ToList();
 
             var requiredDocuments = application.Documents
                         .Where(x => x.DocumentType == (int)DocumentTypes.Required)
-                        .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl))
+                        .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl, x.StatusId, x.Reason))
                         .ToList();
 
             var response = new GetApplicationResponse(
@@ -149,12 +149,12 @@ public class ApplicationsEndPoints : ICarterModule
             {
                 var applicationDocuments = application.Documents
                         .Where(x => x.DocumentType == (int)DocumentTypes.Application)
-                        .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl))
+                        .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl, x.StatusId, x.Reason))
                         .ToList();
 
                 var requiredDocuments = application.Documents
                             .Where(x => x.DocumentType == (int)DocumentTypes.Required)
-                            .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl))
+                            .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl, x.StatusId, x.Reason))
                             .ToList();
 
                 var response = new GetApplicationResponse(
