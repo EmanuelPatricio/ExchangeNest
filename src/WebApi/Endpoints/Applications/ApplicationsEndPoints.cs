@@ -203,7 +203,7 @@ public class ApplicationsEndPoints : ICarterModule
                 var applicationDocumentNewId = 0;
                 applicationDocumentNewId = applicationDocuments.Count > 0 ? applicationDocuments.Last().Id : applicationDocumentNewId;
 
-                applicationDocuments.Add(new(--applicationDocumentNewId, applicationDocument.Category, applicationDocument.Url));
+                applicationDocuments.Add(new(--applicationDocumentNewId, applicationDocument.Category, applicationDocument.Url, applicationDocument.StatusId, applicationDocument.Reason));
             }
 
             var requiredDocuments = new List<ApplicationDocumentValues>();
@@ -219,7 +219,7 @@ public class ApplicationsEndPoints : ICarterModule
                 requiredDocumentNewId = applicationDocuments.Count > 0 ? applicationDocuments.Last().Id : requiredDocumentNewId;
                 requiredDocumentNewId = requiredDocuments.Count > 0 ? requiredDocuments.Last().Id : requiredDocumentNewId;
 
-                requiredDocuments.Add(new(--requiredDocumentNewId, requiredDocument.Category, requiredDocument.Url));
+                requiredDocuments.Add(new(--requiredDocumentNewId, requiredDocument.Category, requiredDocument.Url, requiredDocument.StatusId, requiredDocument.Reason));
             }
 
             var command = new UpdateApplicationCommand(
