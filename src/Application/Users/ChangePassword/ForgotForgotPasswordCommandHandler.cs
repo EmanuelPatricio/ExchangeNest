@@ -26,9 +26,7 @@ internal sealed class ForgotForgotPasswordCommandHandler : ICommandHandler<Forgo
             return emailResult.Error;
         }
 
-        var isEmailUnique = await _userRepository.IsEmailUniqueAsync(emailResult.Value);
-
-        if (isEmailUnique)
+        if (await _userRepository.IsEmailUniqueAsync(emailResult.Value))
         {
             return Email.NotFound;
         }

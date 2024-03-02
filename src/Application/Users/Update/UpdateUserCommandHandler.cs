@@ -28,11 +28,10 @@ internal sealed class UpdateUserCommandHandler : ICommandHandler<UpdateUserComma
         }
 
         var id = new UserId(command.Id);
-        var email = emailResult.Value;
 
-        if (!await _userRepository.IsEmailUniqueAsync(email, id))
+        if (await _userRepository.IsEmailUniqueAsync(emailResult.Value, id))
         {
-            return UserErrors.EmailNotUnique;
+            return UserErrors.NotFoundEmail;
         }
 
         var user = await _userRepository.GetById(id);
@@ -50,7 +49,7 @@ internal sealed class UpdateUserCommandHandler : ICommandHandler<UpdateUserComma
             ? null
             : new UserImageUrl(command.ImageUrl);
 
-        User.Update(user, firstName, lastName, nic, email, birthDate, imageUrl, command.StatusId, command.RoleId, command.CountryId);
+        User.Update(user, firstName, lastName, nic, emailResult.Value, birthDate, imageUrl, command.StatusId, command.RoleId, command.CountryId);
 
         if (!_userRepository.DoesDatabaseHasChanges())
         {

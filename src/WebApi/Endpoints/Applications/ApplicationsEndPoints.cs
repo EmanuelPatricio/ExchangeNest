@@ -65,7 +65,7 @@ public class ApplicationsEndPoints : ICarterModule
                 var requiredDocumentNewId = applicationDocuments.Count > 0 ? applicationDocuments.Last().Id : newDocumentId.Value - 1;
                 requiredDocumentNewId = requiredDocuments.Count > 0 ? requiredDocuments.Last().Id : requiredDocumentNewId;
 
-                applicationDocuments.Add(new ApplicationDocumentValues(++requiredDocumentNewId, requiredDocument.Category, requiredDocument.Url));
+                requiredDocuments.Add(new ApplicationDocumentValues(++requiredDocumentNewId, requiredDocument.Category, requiredDocument.Url));
             }
 
             var command = new PublishApplicationCommand(
@@ -103,20 +103,24 @@ public class ApplicationsEndPoints : ICarterModule
                 return TypedResults.NotFound();
             }
 
+            var applicationDocuments = application.Documents
+                        .Where(x => x.DocumentType == (int)DocumentTypes.Application)
+                        .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl))
+                        .ToList();
+
+            var requiredDocuments = application.Documents
+                        .Where(x => x.DocumentType == (int)DocumentTypes.Required)
+                        .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl))
+                        .ToList();
+
             var response = new GetApplicationResponse(
                     application.Id.Value,
                     application.ProgramId,
                     application.StudentId,
                     application.Reason.Value,
                     application.StatusId,
-                    application.Documents
-                        .Where(x => x.DocumentType == (int)DocumentTypes.Application)
-                        .Select(x => new { x.Id.Value, x.DocumentUrl })
-                        .ToDictionary(x => x.Value, x => x.DocumentUrl),
-                    application.Documents
-                        .Where(x => x.DocumentType == (int)DocumentTypes.Required)
-                        .Select(x => new { x.Id.Value, x.DocumentUrl })
-                        .ToDictionary(x => x.Value, x => x.DocumentUrl));
+                    applicationDocuments,
+                    requiredDocuments);
 
             return TypedResults.Ok(response);
         }
@@ -143,20 +147,25 @@ public class ApplicationsEndPoints : ICarterModule
 
             foreach (var application in applicationsList)
             {
-                var response = new GetApplicationResponse(
-                    application.Id.Value,
-                    application.ProgramId,
-                    application.StudentId,
-                    application.Reason.Value,
-                    application.StatusId,
-                    application.Documents
+                var applicationDocuments = application.Documents
                         .Where(x => x.DocumentType == (int)DocumentTypes.Application)
-                        .Select(x => new { x.Id.Value, x.DocumentUrl })
-                        .ToDictionary(x => x.Value, x => x.DocumentUrl),
-                    application.Documents
-                        .Where(x => x.DocumentType == (int)DocumentTypes.Required)
-                        .Select(x => new { x.Id.Value, x.DocumentUrl })
-                        .ToDictionary(x => x.Value, x => x.DocumentUrl));
+                        .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl))
+                        .ToList();
+
+                var requiredDocuments = application.Documents
+                            .Where(x => x.DocumentType == (int)DocumentTypes.Required)
+                            .Select(x => new ApplicationDocumentValues(x.Id.Value, x.DocumentCategory, x.DocumentUrl))
+                            .ToList();
+
+                var response = new GetApplicationResponse(
+                        application.Id.Value,
+                        application.ProgramId,
+                        application.StudentId,
+                        application.Reason.Value,
+                        application.StatusId,
+                        applicationDocuments,
+                        requiredDocuments);
+
 
                 applicationsResponse.Add(response);
             }

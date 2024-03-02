@@ -5,5 +5,5 @@ public sealed record GetApplicationResponse(
     int StudentId,
     string Reason,
     int StatusId,
-    Dictionary<int, string> ApplicationDocuments,
-    Dictionary<int, string> RequiredDocuments);
+    List<ApplicationDocumentValues> ApplicationDocuments,
+    List<ApplicationDocumentValues> RequiredDocuments);

@@ -29,16 +29,14 @@ internal sealed class ChangePasswordUserCommandHandler : ICommandHandler<ChangeP
             return emailResult.Error;
         }
 
-        var email = emailResult.Value;
-
-        if (await _userRepository.IsEmailUniqueAsync(email))
+        if (await _userRepository.IsEmailUniqueAsync(emailResult.Value))
         {
             return UserErrors.NotFoundEmail;
         }
 
         var password = new UserPassword(command.NewPassword);
 
-        await _userRepository.ChangePasswordAsync(email, password);
+        await _userRepository.ChangePasswordAsync(emailResult.Value, password);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
