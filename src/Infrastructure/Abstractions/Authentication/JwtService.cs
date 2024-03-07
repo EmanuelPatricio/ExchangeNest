@@ -47,8 +47,8 @@ internal sealed class JwtService : IJwtService
 
         var claims = new[]
         {
-            new Claim("userId", userId.ToString()),
-            new Claim("roleId", ((Enums.Roles)roleId).ToString())
+            new Claim(CustomClaim.UserId, userId.ToString()),
+            new Claim(CustomClaim.RoleId, ((Enums.Roles)roleId).ToString())
         };
 
         var token = new JwtSecurityToken(issuer,
@@ -58,4 +58,10 @@ internal sealed class JwtService : IJwtService
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+}
+
+public struct CustomClaim
+{
+    public const string UserId = "userId";
+    public const string RoleId = "roleId";
 }

@@ -33,7 +33,7 @@ internal sealed class ForgotForgotPasswordCommandHandler : ICommandHandler<Forgo
 
         var token = EncodePassword.EncodeToBase64(command.Email);
 
-        var result = await _emailSender.SendEmailAsync(new EmailRequest(command.Email, "Password forgotten", $"<a href=\"{command.Url}token={token}\" target=\"_blank\"></a>"));
+        var result = await _emailSender.SendEmailAsync(new EmailRequest(command.Email, "Password forgotten", $"<a href=\"{command.Url}token={token}\" target=\"_blank\">Click here</a>"));
 
         if (result.IsFailure)
         {

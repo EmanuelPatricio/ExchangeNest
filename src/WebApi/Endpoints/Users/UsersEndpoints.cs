@@ -4,8 +4,10 @@ using Application.Users.Update;
 using Carter;
 using Domain.Shared;
 using Domain.Users;
+using Infrastructure.Abstractions.Authentication;
 using MediatR;
 using Microsoft.AspNetCore.Http.HttpResults;
+using System.Security.Claims;
 using static Domain.Shared.Enums;
 
 namespace WebApi.Endpoints.Users;
@@ -78,7 +80,7 @@ public class UsersEndpoints : ICarterModule
         }
     }
 
-    public static async Task<Results<Ok<List<GetUserResponse>>, NotFound, BadRequest<string>>> GetAll(IUserRepository userRepository)
+    public static async Task<Results<Ok<List<GetUserResponse>>, UnauthorizedHttpResult, NotFound, BadRequest<string>>> GetAll(IUserRepository userRepository, HttpContext httpContext)
     {
         try
         {
@@ -91,7 +93,40 @@ public class UsersEndpoints : ICarterModule
                 return TypedResults.NotFound();
             }
 
-            usersList = usersList.Where(x => x.StatusId != (int)Statuses.Deleted).ToList();
+            var identity = httpContext.User.Identity as ClaimsIdentity;
+
+            if (identity is null)
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            if (identity.FindFirst(CustomClaim.UserId) is null)
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            User? userRequest = null;
+
+            if (int.TryParse(identity.FindFirst(CustomClaim.UserId)?.Value, out var userId))
+            {
+                userRequest = await userRepository.GetById(new(userId));
+
+                if (userRequest is null)
+                {
+                    return TypedResults.Unauthorized();
+                }
+            }
+            else
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            usersList = (Roles)userRequest.RoleId switch
+            {
+                Roles.Administrator => usersList,
+                Roles.Organization => usersList.Where(x => x.OrganizationId == userRequest.OrganizationId).ToList(),
+                _ => usersList.Where(x => x.OrganizationId == userRequest.OrganizationId && x.StatusId != (int)Statuses.Deleted).ToList()
+            };
 
             foreach (var user in usersList)
             {

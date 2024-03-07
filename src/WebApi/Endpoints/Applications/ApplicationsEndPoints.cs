@@ -7,9 +7,12 @@ using Application.Applications.Update;
 using Application.Shared.Queries.GetNewId;
 using Carter;
 using Domain.Applications;
+using Domain.Users;
+using Infrastructure.Abstractions.Authentication;
 using MediatR;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.CodeAnalysis;
+using System.Security.Claims;
 using static Domain.Shared.Enums;
 
 namespace WebApi.Endpoints.Applications;
@@ -130,7 +133,7 @@ public class ApplicationsEndPoints : ICarterModule
         }
     }
 
-    public static async Task<Results<Ok<List<GetApplicationResponse>>, NotFound, BadRequest<string>>> GetAll(IApplicationRepository applicationRepository)
+    public static async Task<Results<Ok<List<GetApplicationResponse>>, UnauthorizedHttpResult, NotFound, BadRequest<string>>> GetAll(IApplicationRepository applicationRepository, IUserRepository userRepository, HttpContext httpContext)
     {
         try
         {
@@ -143,7 +146,35 @@ public class ApplicationsEndPoints : ICarterModule
                 return TypedResults.NotFound();
             }
 
-            applicationsList = applicationsList.Where(x => x.StatusId != (int)Statuses.Deleted).ToList();
+            var identity = httpContext.User.Identity as ClaimsIdentity;
+
+            if (identity is null)
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            if (identity.FindFirst(CustomClaim.UserId) is null)
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            User? user = null;
+
+            if (int.TryParse(identity.FindFirst(CustomClaim.UserId)?.Value, out var userId))
+            {
+                user = await userRepository.GetById(new(userId));
+
+                if (user is null)
+                {
+                    return TypedResults.Unauthorized();
+                }
+            }
+            else
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            applicationsList = applicationsList.Where(x => x.StatusId != (int)Statuses.Deleted && x.StudentId == userId).ToList();
 
             foreach (var application in applicationsList)
             {

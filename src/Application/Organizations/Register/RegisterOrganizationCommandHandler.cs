@@ -52,7 +52,7 @@ internal sealed class RegisterOrganizationCommandHandler : ICommandHandler<Regis
 
         var token = EncodePassword.EncodeToBase64(command.Id.ToString());
 
-        var result = await _emailSender.SendEmailAsync(new EmailRequest(command.Email, "Creation of organization administrators", $"<a href=\"{command.Url}token={token}\" target=\"_blank\"></a>"));
+        var result = await _emailSender.SendEmailAsync(new EmailRequest(command.Email, "Creation of organization administrators", $"<a href=\"{command.Url}token={token}\" target=\"_blank\">Click here</a>"));
 
         if (result.IsFailure)
         {

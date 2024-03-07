@@ -4,9 +4,13 @@ using Application.ExchangePrograms.Publish;
 using Application.ExchangePrograms.Update;
 using Application.Shared.Queries.GetNewId;
 using Carter;
+using Domain.Applications;
 using Domain.ExchangePrograms;
+using Domain.Users;
+using Infrastructure.Abstractions.Authentication;
 using MediatR;
 using Microsoft.AspNetCore.Http.HttpResults;
+using System.Security.Claims;
 using static Domain.Shared.Enums;
 
 namespace WebApi.Endpoints.ExchangePrograms;
@@ -88,7 +92,7 @@ public class ExchangeProgramsEndpoints : ICarterModule
         }
     }
 
-    public static async Task<Results<Ok<List<GetExchangeProgramResponse>>, NotFound, BadRequest<string>>> GetAll(IExchangeProgramRepository exchangeProgramRepository)
+    public static async Task<Results<Ok<List<GetExchangeProgramResponse>>, UnauthorizedHttpResult, NotFound, BadRequest<string>>> GetAll(IExchangeProgramRepository exchangeProgramRepository, IUserRepository userRepository, IApplicationRepository applicationRepository, HttpContext httpContext)
     {
         try
         {
@@ -101,13 +105,66 @@ public class ExchangeProgramsEndpoints : ICarterModule
                 return TypedResults.NotFound();
             }
 
+            var identity = httpContext.User.Identity as ClaimsIdentity;
+
+            if (identity is null)
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            if (identity.FindFirst(CustomClaim.UserId) is null)
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            User? user = null;
+
+            if (int.TryParse(identity.FindFirst(CustomClaim.UserId)?.Value, out var userId))
+            {
+                user = await userRepository.GetById(new(userId));
+
+                if (user is null)
+                {
+                    return TypedResults.Unauthorized();
+                }
+            }
+            else
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            var userApplications = await applicationRepository.GetAll();
+
+            userApplications = userApplications.Where(x => x.StudentId == userId).ToList();
+
+            if (userApplications.Any(x => x.StatusId == (int)Statuses.Pending))
+            {
+                return TypedResults.Ok(new List<GetExchangeProgramResponse>());
+            }
+
+            exchangeProgramsList = (Roles)user.RoleId switch
+            {
+                Roles.Administrator => exchangeProgramsList,
+                _ => exchangeProgramsList.Where(x => x.OrganizationId == user.OrganizationId).ToList()
+            };
+
             exchangeProgramsList = exchangeProgramsList.Where(x => x.StatusId != (int)Statuses.Deleted).ToList();
 
             foreach (var exchangeProgram in exchangeProgramsList)
             {
-                var response = new GetExchangeProgramResponse(exchangeProgram.Id.Value, exchangeProgram.Name.Value, exchangeProgram.Description.Value, exchangeProgram.LimitApplicationDate.Value, exchangeProgram.StartDate.Value, exchangeProgram.FinishDate.Value, exchangeProgram.ApplicationDocuments.Value, exchangeProgram.RequiredDocuments.Value, exchangeProgram.Images.Value, exchangeProgram.OrganizationId, exchangeProgram.CountryId, exchangeProgram.StateId, exchangeProgram.StatusId);
-
-                exchangeProgramsResponse.Add(response);
+                exchangeProgramsResponse.Add(new GetExchangeProgramResponse(exchangeProgram.Id.Value,
+                                                              exchangeProgram.Name.Value,
+                                                              exchangeProgram.Description.Value,
+                                                              exchangeProgram.LimitApplicationDate.Value,
+                                                              exchangeProgram.StartDate.Value,
+                                                              exchangeProgram.FinishDate.Value,
+                                                              exchangeProgram.ApplicationDocuments.Value,
+                                                              exchangeProgram.RequiredDocuments.Value,
+                                                              exchangeProgram.Images.Value,
+                                                              exchangeProgram.OrganizationId,
+                                                              exchangeProgram.CountryId,
+                                                              exchangeProgram.StateId,
+                                                              exchangeProgram.StatusId));
             }
 
             return TypedResults.Ok(exchangeProgramsResponse);
