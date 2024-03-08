@@ -29,7 +29,7 @@ internal sealed class UpdateUserCommandHandler : ICommandHandler<UpdateUserComma
 
         var id = new UserId(command.Id);
 
-        if (await _userRepository.IsEmailUniqueAsync(emailResult.Value, id))
+        if (!await _userRepository.IsEmailUniqueAsync(emailResult.Value, id))
         {
             return UserErrors.NotFoundEmail;
         }

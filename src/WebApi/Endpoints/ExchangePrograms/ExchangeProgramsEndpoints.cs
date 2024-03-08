@@ -142,11 +142,14 @@ public class ExchangeProgramsEndpoints : ICarterModule
                 return TypedResults.Ok(new List<GetExchangeProgramResponse>());
             }
 
-            exchangeProgramsList = (Roles)user.RoleId switch
+            if (user.OrganizationId != 0)
             {
-                Roles.Administrator => exchangeProgramsList,
-                _ => exchangeProgramsList.Where(x => x.OrganizationId == user.OrganizationId).ToList()
-            };
+                exchangeProgramsList = (Roles)user.RoleId switch
+                {
+                    Roles.Administrator => exchangeProgramsList,
+                    _ => exchangeProgramsList.Where(x => x.OrganizationId == user.OrganizationId).ToList()
+                };
+            }
 
             exchangeProgramsList = exchangeProgramsList.Where(x => x.StatusId != (int)Statuses.Deleted).ToList();
 

@@ -26,6 +26,15 @@ internal sealed class PublishApplicationCommandHandler : ICommandHandler<Publish
 
     public async Task<Result> Handle(PublishApplicationCommand command, CancellationToken cancellationToken = default)
     {
+        var applications = await _applicationRepository.GetAll();
+
+        var applicationsPerProgram = applications.Where(x => x.StudentId == command.StudentId).GroupBy(x => x.ProgramId).ToList();
+
+        if (applicationsPerProgram.Count > 0)
+        {
+            return new Error("Application", "You have already made an application to this program.");
+        }
+
         var id = new Domain.Applications.ApplicationId(command.Id);
         var reason = new ApplicationReason(command.Reason);
 

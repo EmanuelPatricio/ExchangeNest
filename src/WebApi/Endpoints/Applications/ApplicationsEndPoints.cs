@@ -7,6 +7,7 @@ using Application.Applications.Update;
 using Application.Shared.Queries.GetNewId;
 using Carter;
 using Domain.Applications;
+using Domain.ExchangePrograms;
 using Domain.Users;
 using Infrastructure.Abstractions.Authentication;
 using MediatR;
@@ -133,7 +134,7 @@ public class ApplicationsEndPoints : ICarterModule
         }
     }
 
-    public static async Task<Results<Ok<List<GetApplicationResponse>>, UnauthorizedHttpResult, NotFound, BadRequest<string>>> GetAll(IApplicationRepository applicationRepository, IUserRepository userRepository, HttpContext httpContext)
+    public static async Task<Results<Ok<List<GetApplicationResponse>>, UnauthorizedHttpResult, NotFound, BadRequest<string>>> GetAll(IApplicationRepository applicationRepository, IUserRepository userRepository, IExchangeProgramRepository exchangeProgramRepository, HttpContext httpContext)
     {
         try
         {
@@ -174,7 +175,27 @@ public class ApplicationsEndPoints : ICarterModule
                 return TypedResults.Unauthorized();
             }
 
-            applicationsList = applicationsList.Where(x => x.StatusId != (int)Statuses.Deleted && x.StudentId == userId).ToList();
+            if (user.OrganizationId != 0)
+            {
+                var exchangePrograms = await exchangeProgramRepository.GetAll();
+
+                var exchangeProgramsIds = exchangePrograms.Where(x => x.OrganizationId == user.OrganizationId).Select(x => x.Id.Value).ToList();
+
+                applicationsList = (Roles)user.RoleId switch
+                {
+                    Roles.Administrator => applicationsList,
+                    Roles.Organization => applicationsList.Where(x => exchangeProgramsIds.Contains(x.ProgramId)).ToList(),
+                    _ => applicationsList.Where(x => x.StudentId == userId && x.StatusId != (int)Statuses.Deleted).ToList()
+                };
+            }
+            else
+            {
+                applicationsList = (Roles)user.RoleId switch
+                {
+                    Roles.Administrator or Roles.Organization => applicationsList,
+                    _ => applicationsList.Where(x => x.StudentId == userId && x.StatusId != (int)Statuses.Deleted).ToList()
+                };
+            }
 
             foreach (var application in applicationsList)
             {
