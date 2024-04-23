@@ -79,7 +79,8 @@ public class ApplicationsEndPoints : ICarterModule
                 request.Reason,
                 request.StatusId,
                 applicationDocuments,
-                requiredDocuments);
+                requiredDocuments,
+                request.Url);
 
             var result = await sender.Send(command);
 
@@ -230,10 +231,47 @@ public class ApplicationsEndPoints : ICarterModule
         }
     }
 
-    public static async Task<Results<Ok, UnprocessableEntity<string>, BadRequest<string>>> Update(UpdateApplicationRequest request, ISender sender)
+    public static async Task<Results<Ok, UnprocessableEntity<string>, BadRequest<string>, UnauthorizedHttpResult>> Update(UpdateApplicationRequest request, ISender sender, HttpContext httpContext)
     {
         try
         {
+            int userId;
+
+            var identity = httpContext.User.Identity as ClaimsIdentity;
+
+            if (identity is null)
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            if (identity.FindFirst(CustomClaim.UserId) is null)
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            if (int.TryParse(identity.FindFirst(CustomClaim.UserId)?.Value, out var id))
+            {
+                userId = id;
+            }
+            else
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            if (request.StatusId == (int)Statuses.Cancelled)
+            {
+                await Cancel(new(request.Id, string.Empty), sender);
+
+                return TypedResults.Ok();
+            }
+
+            if (request.StatusId == (int)Statuses.Closed)
+            {
+                await Close(new(request.Id, string.Empty), sender);
+
+                return TypedResults.Ok();
+            }
+
             var query = new GetNewIdQuery("Id", "ApplicationDocuments");
 
             var newDocumentId = await sender.Send(query);
@@ -252,10 +290,13 @@ public class ApplicationsEndPoints : ICarterModule
                     continue;
                 }
 
-                var applicationDocumentNewId = 0;
-                applicationDocumentNewId = applicationDocuments.Count > 0 ? applicationDocuments.Last().Id : applicationDocumentNewId;
+                var applicationDocumentNewId = applicationDocuments.Any() switch
+                {
+                    true => applicationDocuments.Max(x => x.Id) + 1,
+                    false => newDocumentId.Value
+                };
 
-                applicationDocuments.Add(new(--applicationDocumentNewId, applicationDocument.Category, applicationDocument.Url, applicationDocument.StatusId, applicationDocument.Reason));
+                applicationDocuments.Add(new(applicationDocumentNewId, applicationDocument.Category, applicationDocument.Url, applicationDocument.StatusId, applicationDocument.Reason));
             }
 
             var requiredDocuments = new List<ApplicationDocumentValues>();
@@ -267,11 +308,13 @@ public class ApplicationsEndPoints : ICarterModule
                     continue;
                 }
 
-                var requiredDocumentNewId = 0;
-                requiredDocumentNewId = applicationDocuments.Count > 0 ? applicationDocuments.Last().Id : requiredDocumentNewId;
-                requiredDocumentNewId = requiredDocuments.Count > 0 ? requiredDocuments.Last().Id : requiredDocumentNewId;
+                var requiredDocumentNewId = requiredDocuments.Any() switch
+                {
+                    true => requiredDocuments.Max(x => x.Id) + 1,
+                    false => applicationDocuments.Any() ? applicationDocuments.Max(x => x.Id) + 1 : 1
+                };
 
-                requiredDocuments.Add(new(--requiredDocumentNewId, requiredDocument.Category, requiredDocument.Url, requiredDocument.StatusId, requiredDocument.Reason));
+                requiredDocuments.Add(new(requiredDocumentNewId, requiredDocument.Category, requiredDocument.Url, requiredDocument.StatusId, requiredDocument.Reason));
             }
 
             var command = new UpdateApplicationCommand(
@@ -280,7 +323,9 @@ public class ApplicationsEndPoints : ICarterModule
                 request.StatusId,
                 applicationDocuments,
                 requiredDocuments,
-                newDocumentId.Value - 1);
+                newDocumentId.Value - 1,
+                request.Url,
+                userId);
 
             var result = await sender.Send(command);
 

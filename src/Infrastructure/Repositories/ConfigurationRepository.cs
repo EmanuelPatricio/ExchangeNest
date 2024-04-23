@@ -29,7 +29,7 @@ internal sealed class ConfigurationRepository : Repository, IConfigurationReposi
 
         if (configuration is null)
         {
-            _db.Configurations.Add(new(new(1), string.Empty, string.Empty, string.Empty));
+            _db.Configurations.Add(new(new(1), string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty));
         }
 
         var otherConfigurations = _db.Configurations.Where(x => x.Id != new ConfigurationId(1)).AsEnumerable();

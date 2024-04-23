@@ -7,6 +7,7 @@ using Domain.Organizations;
 using Domain.Organizations.ValueObjects;
 using Domain.Shared;
 using Domain.Users;
+using static Domain.Shared.Enums;
 
 namespace Application.Organizations.Register;
 internal sealed class RegisterOrganizationCommandHandler : ICommandHandler<RegisterOrganizationCommand>
@@ -52,7 +53,20 @@ internal sealed class RegisterOrganizationCommandHandler : ICommandHandler<Regis
 
         var token = EncodePassword.EncodeToBase64(command.Id.ToString());
 
-        var result = await _emailSender.SendEmailAsync(new EmailRequest(command.Email, "Creation of organization administrators", $"<a href=\"{command.Url}token={token}\" target=\"_blank\">Click here</a>"));
+        var emailMessage = await _emailSender.GetEmailHtmlFileData(EmailHtmlFile.RegisterOrganization);
+
+        if (emailMessage.IsFailure)
+        {
+            return Email.NotSended;
+        }
+
+        var message = emailMessage.Value.Replace("[Organization name]", $"{command.Name}");
+        message = message.Replace("[url]", $"{command.Url}token={token}");
+
+        var result = await _emailSender.SendEmailAsync(new EmailRequest(
+            To: command.Email,
+            Subject: $"Welcome to {command.Name} in our system!",
+            Message: message));
 
         if (result.IsFailure)
         {

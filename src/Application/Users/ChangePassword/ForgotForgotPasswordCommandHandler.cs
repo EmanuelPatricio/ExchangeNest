@@ -4,6 +4,7 @@ using Application.Users.Shared;
 using Domain.Abstractions;
 using Domain.Shared;
 using Domain.Users;
+using static Domain.Shared.Enums;
 
 namespace Application.Users.ChangePassword;
 internal sealed class ForgotForgotPasswordCommandHandler : ICommandHandler<ForgotForgotPasswordCommand>
@@ -31,9 +32,29 @@ internal sealed class ForgotForgotPasswordCommandHandler : ICommandHandler<Forgo
             return Email.NotFound;
         }
 
+        var user = await _userRepository.GetByEmail(emailResult.Value);
+
+        if (user is null)
+        {
+            return UserErrors.NotFoundEmail;
+        }
+
         var token = EncodePassword.EncodeToBase64(command.Email);
 
-        var result = await _emailSender.SendEmailAsync(new EmailRequest(command.Email, "Password forgotten", $"<a href=\"{command.Url}token={token}\" target=\"_blank\">Click here</a>"));
+        var emailMessage = await _emailSender.GetEmailHtmlFileData(EmailHtmlFile.ForgotPassword);
+
+        if (emailMessage.IsFailure)
+        {
+            return Email.NotSended;
+        }
+
+        var message = emailMessage.Value.Replace("[User name]", user.FirstName.Value);
+        message = message.Replace("[url]", $"{command.Url}token={token}");
+
+        var result = await _emailSender.SendEmailAsync(new EmailRequest(
+            To: command.Email,
+            Subject: "Password reset for your account",
+            Message: message));
 
         if (result.IsFailure)
         {

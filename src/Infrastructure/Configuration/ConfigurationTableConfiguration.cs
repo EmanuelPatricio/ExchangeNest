@@ -19,6 +19,20 @@ public class ConfigurationTableConfiguration : IEntityTypeConfiguration<Domain.C
 
         builder.Property(x => x.SenderPassword).IsRequired();
 
-        builder.Property(x => x.EmailTemplate).IsRequired();
+        builder.Property(x => x.BaseTemplate).IsRequired();
+
+        builder.Property(x => x.ForgotPassword).IsRequired();
+
+        builder.Property(x => x.RegisterOrganization).IsRequired();
+
+        builder.Property(x => x.PublishApplication).IsRequired();
+
+        builder.Property(x => x.UpdateApplication).IsRequired();
+
+        builder.Property(x => x.RegisterUser).IsRequired();
+
+        builder.Property(x => x.CompletedApplication).IsRequired();
+
+        builder.Property(x => x.CancelledApplication).IsRequired();
     }
 }

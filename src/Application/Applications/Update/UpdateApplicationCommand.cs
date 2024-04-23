@@ -7,4 +7,6 @@ public sealed record UpdateApplicationCommand(
         int StatusId,
         List<ApplicationDocumentValues> ApplicationDocuments,
         List<ApplicationDocumentValues> RequiredDocuments,
-        int NextDocumentId) : ICommand;
+        int NextDocumentId,
+        string Url,
+        int UserId) : ICommand;

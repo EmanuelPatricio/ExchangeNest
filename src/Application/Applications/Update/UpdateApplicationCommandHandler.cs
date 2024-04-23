@@ -4,8 +4,10 @@ using Application.Abstractions.Messaging;
 using Domain.Abstractions;
 using Domain.Applications;
 using Domain.Applications.ValueObjects;
+using Domain.ExchangePrograms;
 using Domain.Shared;
 using Domain.Users;
+using static Domain.Shared.Enums;
 
 namespace Application.Applications.Update;
 internal sealed class UpdateApplicationCommandHandler : ICommandHandler<UpdateApplicationCommand>
@@ -14,13 +16,15 @@ internal sealed class UpdateApplicationCommandHandler : ICommandHandler<UpdateAp
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailSender _emailSender;
     private readonly IUserRepository _userRepository;
+    private readonly IExchangeProgramRepository _exchangeProgramRepository;
 
-    public UpdateApplicationCommandHandler(IApplicationRepository applicationRepository, IUnitOfWork unitOfWork, IEmailSender emailSender, IUserRepository userRepository)
+    public UpdateApplicationCommandHandler(IApplicationRepository applicationRepository, IUnitOfWork unitOfWork, IEmailSender emailSender, IUserRepository userRepository, IExchangeProgramRepository exchangeProgramRepository)
     {
         _applicationRepository = applicationRepository;
         _unitOfWork = unitOfWork;
         _emailSender = emailSender;
         _userRepository = userRepository;
+        _exchangeProgramRepository = exchangeProgramRepository;
     }
 
     public async Task<Result> Handle(UpdateApplicationCommand command, CancellationToken cancellationToken = default)
@@ -44,12 +48,12 @@ internal sealed class UpdateApplicationCommandHandler : ICommandHandler<UpdateAp
 
             if (document is null)
             {
-                var newId = documentsIds.Last();
+                var newId = documentsIds.Max() + 1;
 
                 _applicationRepository.Create(ApplicationDocument.Create(
-                    new(newId + 1), id, applicationDocument.Category, (int)Enums.DocumentTypes.Application, applicationDocument.Url, applicationDocument.StatusId, applicationDocument.Reason));
+                    new(newId), id, applicationDocument.Category, (int)Enums.DocumentTypes.Application, applicationDocument.Url, applicationDocument.StatusId, applicationDocument.Reason));
 
-                documentsIds.Add(newId + 1);
+                documentsIds.Add(newId);
                 continue;
             }
 
@@ -62,12 +66,12 @@ internal sealed class UpdateApplicationCommandHandler : ICommandHandler<UpdateAp
 
             if (document is null)
             {
-                var newId = documentsIds.Last();
+                var newId = documentsIds.Max() + 1;
 
                 _applicationRepository.Create(ApplicationDocument.Create(
-                    new(newId + 1), id, requiredDocument.Category, (int)Enums.DocumentTypes.Required, requiredDocument.Url, requiredDocument.StatusId, requiredDocument.Reason));
+                    new(newId), id, requiredDocument.Category, (int)Enums.DocumentTypes.Required, requiredDocument.Url, requiredDocument.StatusId, requiredDocument.Reason));
 
-                documentsIds.Add(newId + 1);
+                documentsIds.Add(newId);
                 continue;
             }
 
@@ -89,7 +93,33 @@ internal sealed class UpdateApplicationCommandHandler : ICommandHandler<UpdateAp
             return UserErrors.NotFound(application.StudentId);
         }
 
-        await _emailSender.SendEmailAsync(new(user.Email.Value, "Updated Application", "Your application has been updated."));
+        if (user.Id.Value == command.UserId)
+        {
+            return Result.Success();
+        }
+
+        var exchangeProgram = await _exchangeProgramRepository.GetById(new(application.ProgramId));
+
+        if (exchangeProgram is null)
+        {
+            return ExchangeProgramErrors.NotFound(application.ProgramId);
+        }
+
+        var emailMessage = await _emailSender.GetEmailHtmlFileData(EmailHtmlFile.UpdateApplication);
+
+        if (emailMessage.IsFailure)
+        {
+            return Email.NotSended;
+        }
+
+        var message = emailMessage.Value.Replace("[User name]", user.FirstName.Value);
+        message = message.Replace("[Exchange program name]", exchangeProgram.Name.Value);
+        message = message.Replace("[url]", command.Url);
+
+        await _emailSender.SendEmailAsync(new(
+            To: user.Email.Value,
+            Subject: "Application update for the exchange program",
+            Message: message));
 
         return Result.Success();
     }

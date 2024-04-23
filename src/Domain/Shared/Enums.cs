@@ -25,6 +25,30 @@ public class Enums
         { (int)DocumentTypes.Required, "Required" },
     };
 
+    public enum EmailHtmlFile
+    {
+        BaseTemplate,
+        ForgotPassword,
+        RegisterOrganization,
+        PublishApplication,
+        UpdateApplication,
+        RegisterUser,
+        CompletedApplication,
+        CancelledApplication
+    }
+
+    public static Dictionary<EmailHtmlFile, string> EmailHtmlFilePath = new()
+    {
+        { EmailHtmlFile.BaseTemplate, "BaseTemplate" },
+        { EmailHtmlFile.ForgotPassword, "ForgotPassword" },
+        { EmailHtmlFile.RegisterOrganization, "RegisterOrganization" },
+        { EmailHtmlFile.PublishApplication, "PublishApplication" },
+        { EmailHtmlFile.UpdateApplication, "UpdateApplication" },
+        { EmailHtmlFile.RegisterUser, "RegisterUser" },
+        { EmailHtmlFile.CompletedApplication, "CompletedApplication" },
+        { EmailHtmlFile.CancelledApplication, "CancelledApplication" },
+    };
+
     public enum Roles
     {
         Student = 1,

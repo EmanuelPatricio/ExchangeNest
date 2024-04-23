@@ -8,4 +8,5 @@ public sealed record PublishApplicationCommand(
         string Reason,
         int StatusId,
         List<ApplicationDocumentValues> ApplicationDocuments,
-        List<ApplicationDocumentValues> RequiredDocuments) : ICommand;
+        List<ApplicationDocumentValues> RequiredDocuments,
+        string Url) : ICommand;

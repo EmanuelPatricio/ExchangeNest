@@ -19,7 +19,7 @@ internal sealed class GetEmailConfigurationQueryHandler : IQueryHandler<GetEmail
     {
         using var connection = _dbConnectionFactory.CreateOpenConnection();
 
-        var query = "SELECT SenderMail, SenderPassword, EmailTemplate FROM Configurations";
+        var query = "SELECT SenderMail, SenderPassword FROM Configurations";
 
         var emailConfigurations = await connection.QueryFirstOrDefaultAsync<Configuration>(query);
 

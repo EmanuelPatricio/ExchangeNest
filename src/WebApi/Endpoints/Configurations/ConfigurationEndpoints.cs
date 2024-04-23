@@ -18,7 +18,7 @@ public class ConfigurationEndpoints : ICarterModule
     {
         try
         {
-            var command = new UpdateConfigurationCommand(request.SenderMail, request.SenderPassword, request.EmailTemplate);
+            var command = new UpdateConfigurationCommand(request.SenderMail, request.SenderPassword, request.BaseTemplate, request.ForgotPassword, request.RegisterOrganization, request.PublishApplication, request.UpdateApplication, request.RegisterUser, request.CompletedApplication, request.CancelledApplication);
 
             var result = await sender.Send(command);
 

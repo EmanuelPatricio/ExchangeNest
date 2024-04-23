@@ -4,8 +4,10 @@ using Application.Abstractions.Messaging;
 using Domain.Abstractions;
 using Domain.Applications;
 using Domain.Applications.ValueObjects;
+using Domain.ExchangePrograms;
 using Domain.Shared;
 using Domain.Users;
+using static Domain.Shared.Enums;
 
 namespace Application.Applications.Publish;
 
@@ -15,22 +17,24 @@ internal sealed class PublishApplicationCommandHandler : ICommandHandler<Publish
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailSender _emailSender;
     private readonly IUserRepository _userRepository;
+    private readonly IExchangeProgramRepository _exchangeProgramRepository;
 
-    public PublishApplicationCommandHandler(IApplicationRepository applicationRepository, IUnitOfWork unitOfWork, IEmailSender emailSender, IUserRepository userRepository)
+    public PublishApplicationCommandHandler(IApplicationRepository applicationRepository, IUnitOfWork unitOfWork, IEmailSender emailSender, IUserRepository userRepository, IExchangeProgramRepository exchangeProgramRepository)
     {
         _applicationRepository = applicationRepository;
         _unitOfWork = unitOfWork;
         _emailSender = emailSender;
         _userRepository = userRepository;
+        _exchangeProgramRepository = exchangeProgramRepository;
     }
 
     public async Task<Result> Handle(PublishApplicationCommand command, CancellationToken cancellationToken = default)
     {
         var applications = await _applicationRepository.GetAll();
 
-        var applicationsPerProgram = applications.Where(x => x.StudentId == command.StudentId).GroupBy(x => x.ProgramId).ToList();
+        var userHasAlreadyApplied = applications.Any(x => x.StudentId == command.StudentId && x.StatusId != (int)Enums.Statuses.Cancelled && x.ProgramId == command.ProgramId);
 
-        if (applicationsPerProgram.Count > 0)
+        if (userHasAlreadyApplied)
         {
             return new Error("Application", "You have already made an application to this program.");
         }
@@ -50,9 +54,9 @@ internal sealed class PublishApplicationCommandHandler : ICommandHandler<Publish
             documents.Add(ApplicationDocument.Create(new(requiredDocument.Id), id, requiredDocument.Category, (int)Enums.DocumentTypes.Required, requiredDocument.Url, requiredDocument.StatusId, requiredDocument.Reason));
         }
 
-        var exchangeProgram = Domain.Applications.Application.Create(id, command.ProgramId, command.StudentId, reason, command.StatusId, documents);
+        var application = Domain.Applications.Application.Create(id, command.ProgramId, command.StudentId, reason, command.StatusId, documents);
 
-        _applicationRepository.Create(exchangeProgram);
+        _applicationRepository.Create(application);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -63,7 +67,28 @@ internal sealed class PublishApplicationCommandHandler : ICommandHandler<Publish
             return UserErrors.NotFound(command.StudentId);
         }
 
-        await _emailSender.SendEmailAsync(new(user.Email.Value, "New Application", "You have successfully applied to a program."));
+        var exchangeProgram = await _exchangeProgramRepository.GetById(new(command.ProgramId));
+
+        if (exchangeProgram is null)
+        {
+            return ExchangeProgramErrors.NotFound(command.ProgramId);
+        }
+
+        var emailMessage = await _emailSender.GetEmailHtmlFileData(EmailHtmlFile.PublishApplication);
+
+        if (emailMessage.IsFailure)
+        {
+            return Email.NotSended;
+        }
+
+        var message = emailMessage.Value.Replace("[User name]", user.FirstName.Value);
+        message = message.Replace("[Exchange program name]", exchangeProgram.Name.Value);
+        message = message.Replace("[url]", command.Url);
+
+        await _emailSender.SendEmailAsync(new(
+            To: user.Email.Value,
+            Subject: "Your application for the exchange program has been successfully published!",
+            Message: message));
 
         return Result.Success();
     }

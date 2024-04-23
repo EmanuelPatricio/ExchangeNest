@@ -8,4 +8,5 @@ public sealed record PublishApplicationRequest(
         string Reason,
         int StatusId,
         List<ApplicationDocumentValues> ApplicationDocuments,
-        List<ApplicationDocumentValues> RequiredDocuments);
+        List<ApplicationDocumentValues> RequiredDocuments,
+        string Url);

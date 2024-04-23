@@ -24,7 +24,6 @@ public class ExchangeProgramConfiguration : IEntityTypeConfiguration<ExchangePro
             );
 
         builder.Property(x => x.Description)
-            .HasMaxLength(200)
             .HasConversion(
                 c => c.Value,
                 value => new ExchangeProgramDescription(value)

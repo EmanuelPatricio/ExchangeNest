@@ -1,21 +1,25 @@
 ﻿using Application.Abstractions.Data;
+using Application.Abstractions.Email;
 using Application.Abstractions.Messaging;
 using Application.Users.Shared;
 using Domain.Abstractions;
 using Domain.Shared;
 using Domain.Users;
 using Domain.Users.ValueObjects;
+using static Domain.Shared.Enums;
 
 namespace Application.Users.Create;
 internal sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserCommand>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmailSender _emailSender;
 
-    public RegisterUserCommandHandler(IUserRepository userRepository, IUnitOfWork unitOfWork)
+    public RegisterUserCommandHandler(IUserRepository userRepository, IUnitOfWork unitOfWork, IEmailSender emailSender)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _emailSender = emailSender;
     }
 
     public async Task<Result> Handle(RegisterUserCommand command, CancellationToken cancellationToken = default)
@@ -53,6 +57,23 @@ internal sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserC
         _userRepository.Create(user);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var emailMessage = await _emailSender.GetEmailHtmlFileData(EmailHtmlFile.RegisterUser);
+
+        if (emailMessage.IsFailure)
+        {
+            return Email.NotSended;
+        }
+
+        var result = await _emailSender.SendEmailAsync(new EmailRequest(
+            To: command.Email,
+            Subject: $"Welcome to Exchange Nest!",
+            Message: emailMessage.Value));
+
+        if (result.IsFailure)
+        {
+            return Email.NotSended;
+        }
 
         return Result.Success();
     }

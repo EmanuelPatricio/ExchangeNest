@@ -32,7 +32,7 @@ internal sealed class UpdateConfigurationCommandHandler : ICommandHandler<Update
 
         var encryptedSenderPassword = EncodePassword.EncodeToBase64(command.SenderPassword);
 
-        Configuration.Update(configuration, command.SenderMail, encryptedSenderPassword, command.EmailTemplate);
+        Configuration.Update(configuration, command.SenderMail, encryptedSenderPassword, command.BaseTemplate, command.ForgotPassword, command.RegisterOrganization, command.PublishApplication, command.UpdateApplication, command.RegisterUser, command.CompletedApplication, command.CancelledApplication);
 
         if (!_configurationRepository.DoesDatabaseHasChanges())
         {
